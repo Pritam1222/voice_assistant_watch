@@ -43,14 +43,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
@@ -162,11 +169,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener , DataClie
                     if (currentTimestamp - receivedTimestamp < 5000) {
                         healthcareData = dataMapItem.dataMap.getString("Healthcare") ?: ""
                         groceriesData = dataMapItem.dataMap.getString("Groceries") ?: ""
-                        bodyMeasurementData = dataMapItem.dataMap.getString("BodyMeasurement") ?: ""
+                        bodyMeasurementData = dataMapItem.dataMap.getString("Diet") ?: ""
 
                         saveReceivedDataToPreferences("Healthcare",healthcareData)
                         saveReceivedDataToPreferences("Groceries",groceriesData)
-                        saveReceivedDataToPreferences("BodyMeasurement",bodyMeasurementData)
+                        saveReceivedDataToPreferences("Diet",bodyMeasurementData)
                     }
                 }
             }
@@ -280,7 +287,7 @@ fun DataShareScreen(sharedPreferences: SharedPreferences,navController: NavHostC
                     ),
                     ToggleableInfo(
                         isChecked = false,
-                        text = "BodyMeasurement"
+                        text = "Diet"
                     )
                 )
             }
@@ -288,11 +295,13 @@ fun DataShareScreen(sharedPreferences: SharedPreferences,navController: NavHostC
             checkboxes.forEachIndexed{index, info ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable{
-                        checkboxes[index] = info.copy(
-                            isChecked = !info.isChecked
-                        )
-                    }
+                    modifier = Modifier
+                        .clickable {
+                            checkboxes[index] = info.copy(
+                                isChecked = !info.isChecked
+                            )
+                        }
+                        .align(Alignment.Start)
                 ) {
                     Checkbox(checked = info.isChecked,
                         onCheckedChange = {isChecked ->
@@ -303,6 +312,8 @@ fun DataShareScreen(sharedPreferences: SharedPreferences,navController: NavHostC
                     Text(text = info.text)
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(onClick = {
                 val checkedCheckboxes = checkboxes.filter { it.isChecked }
@@ -317,7 +328,9 @@ fun DataShareScreen(sharedPreferences: SharedPreferences,navController: NavHostC
 
                 navController.navigate("showQR/$showingData")
             }) {
-                Text("Show QR")
+                Text(modifier = Modifier
+                    .padding(start = 10.dp, end = 10.dp),
+                    text = "Show QR")
             }
         }
     }
@@ -386,10 +399,6 @@ fun SpeechToTextScreen(textToSpeech: TextToSpeech) {
 
     var isMicOn by remember { mutableStateOf(false) }
 
-    MicToggle { micState ->
-        isMicOn = micState
-    }
-
     var answer by remember {
         mutableStateOf("")
     }
@@ -398,7 +407,7 @@ fun SpeechToTextScreen(textToSpeech: TextToSpeech) {
         temperature = 0.9f
         topK = 16
         topP = 1f
-        maxOutputTokens = 200
+//        maxOutputTokens = 500
 
     }
 
@@ -418,6 +427,7 @@ fun SpeechToTextScreen(textToSpeech: TextToSpeech) {
                     generativeModel.generateContent(prompt = prompt).text!!
                 }
                 answer = response
+                println(answer)
                 textToSpeech.speak(answer, TextToSpeech.QUEUE_FLUSH, null, null)
             } catch (e: ResponseStoppedException) {
                 answer = "Content generation stopped. Please provide a shorter prompt."
@@ -430,17 +440,40 @@ fun SpeechToTextScreen(textToSpeech: TextToSpeech) {
         modifier = Modifier
             .padding(16.dp)
             .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = transcription,
-            fontSize = 18.sp
-        )
+        horizontalAlignment = Alignment.CenterHorizontally,
+
+        ) {
+
+        MicToggle { micState ->
+            isMicOn = micState
+        }
 
         Text(
-            text = answer,
-            fontSize = 16.sp
+            text = "Hold mic to speak",
+            fontSize = 8.sp
         )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .align(Alignment.Start)
+        ) {
+            Text(
+                text = transcription,
+                fontSize = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = answer,
+                color = Color.Green,
+                fontSize = 12.sp
+            )
+
+        }
 
         SpeechToText(
             recognizer = recognizer,
@@ -495,7 +528,7 @@ fun MicToggle(onMicStateChanged: (Boolean) -> Unit) {
         LottieAnimation(
             composition = composition,
             progress = progress,
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(60.dp)
         )
     }
 }
